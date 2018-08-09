@@ -1,44 +1,41 @@
 /// <reference path="./Screeps-Typescript-Declarations/dist/screeps.d.ts"/>
 var ConsoleCommands = require('console.commands');
+var CreepManager = require('creep.manager');
 
 module.exports.loop = () => {
 
-    let totalHarvesters = 0
-    let totalBuilders = 0
-    for(let name in Game.creeps){
-        let creep = Game.creeps[name]
-        if(creep.memory.role == 0){
-            totalHarvesters++;
+    //HARVESTERS
+    CreepManager.CreepsInRole(0, (err, totalCreeps, Creeps) => {
+        if(err){
+            console.log(err)
         }
-        else if(creep.memory.role == 1){
-            totalBuilders++;
+        if(totalCreeps < 5){
+            CreepManager.SpawnNewCreep("Spawn1",0, function(err){
+                if(err){
+                    console.log(err);
+                }
+                else{
+                    console.log("Succesfully Spawned Harvester");
+                }
+            })
         }
-    }
-    if(totalHarvesters < 4 && !Game.spawns["Spawn1"].spawning){
-        let spawning = Game.spawns["Spawn1"].spawnCreep([MOVE, MOVE, CARRY, WORK], "Harvester_"+(new Date().getTime()), {memory:{role: 0, status: null}});
-        if(spawning == OK){
-            console.log("New Creep Spawned")
+    });
+    //BUILDERS
+    CreepManager.CreepsInRole(1, (err, totalCreeps, Creeps) => {
+        if(err){
+            console.log(err)
         }
-        else if(spawning == ERR_NOT_ENOUGH_ENERGY){
-            //wait until we have enough energy to create new harvester creep
+        if(totalCreeps < 2){
+            CreepManager.SpawnNewCreep("Spawn1",1, function(err){
+                if(err){
+                    console.log(err);
+                }
+                else{
+                    console.log("Succesfully Spawned Builder");
+                }
+            })
         }
-        else{
-            console.log("Unhandled Spawning State: "+spawning);
-        }
-    }
-    else if(totalBuilders < 2 && !Game.spawns["Spawn1"].spawning){
-        let spawning = Game.spawns["Spawn1"].spawnCreep([MOVE, CARRY, WORK, WORK], "BUILDER_"+(new Date().getTime()), {memory:{role: 1, status: null}});
-        if(spawning == OK){
-            console.log("New Builder Creep Spawned")
-        }
-        else if(spawning == ERR_NOT_ENOUGH_ENERGY){
-            //wait until we have enough energy to create new harvester creep
-        }
-        else{
-            console.log("Unhandled Spawning State: "+spawning);
-        }
-    }
-
+    });
 
     for(let name in Game.creeps){
         let creep = Game.creeps[name]
