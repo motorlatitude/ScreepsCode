@@ -1,6 +1,18 @@
 /// <reference path="./Screeps-Typescript-Declarations/dist/screeps.d.ts"/>
 
 Harvester = {
+    init: () => {
+        if(!Memory.sourceQueue){
+            Memory.sourceQueue = {}
+        }
+        let allEnergySources = Game.spawns["Spawn1"].room.find(FIND_SOURCES)
+        for(let i in allEnergySources){
+            let energy_source = allEnergySources[i];
+            if(!Memory.sourceQueue[energy_source.id]){
+                Memory.sourceQueue[energy_source.id] = {queued_creeps: [], source: energy_source};
+            }
+        }
+    },
     isNearEnergySource: (harvester_creep) => {
         if(harvester_creep != null){
             let nearestEnergySource = harvester_creep.pos.findClosestByPath(FIND_SOURCES);
@@ -49,7 +61,7 @@ Harvester = {
                 let transfer = creep.transfer(nearestEnergyDrop.structure, RESOURCE_ENERGY);
                 if(transfer != OK){
                     creep.say("❌ 💱");
-                    console.log("Unable To Transfer Energy To Spawn: "+transfer);
+                    console.log("Unable To Transfer Energy To Spawn: "+transfer+"\n Calculating New Route...");
                     Harvester.setNextTask.findNearestEnergyDrop(creep);
                 }
                 else{
@@ -61,7 +73,7 @@ Harvester = {
                 let upgrade = creep.upgradeController(nearestEnergyDrop.structure);
                 if(upgrade != OK){
                     creep.say("❌ 💱");
-                    console.log("Unable To Transfer Energy To Controller: "+upgrade);
+                    console.log("Unable To Transfer Energy To Controller: "+upgrade+"\n Calculating New Route...");
                     Harvester.setNextTask.findNearestEnergyDrop(creep);
                 }
                 else{
@@ -76,6 +88,7 @@ Harvester = {
         }
     },
     update: () => {
+        Harvester.init();
         let harvesters = _.filter(Game.creeps, function(creep){
             return creep.memory.role == 0;
         });
@@ -104,14 +117,7 @@ Harvester = {
                         Harvester.setNextTask.findNearestEnergyDrop(harvester_creep);
                     }
                     else{
-                        let harvesting = harvester_creep.harvest(harvester_creep.pos.findClosestByPath(FIND_SOURCES));
-                        if(harvesting == OK){
-                            Harvester.setNextTask.keepHarvesting(harvester_creep);
-                        }
-                        else{
-                            harvester_creep.say("⚠️");
-                            console.log("Error Occurred Attempting To Mine Energy: "+harvesting)
-                        }
+                        Harvester.setNextTask.keepHarvesting(harvester_creep);
                     }
                 }
                 else if(harvester_creep_status.state == "FINDING_NEAREST_ENERGY_DROP" && harvester_creep.carry.energy > 0){
