@@ -1,4 +1,6 @@
-module.exports = {
+/// <reference path="./Screeps-Typescript-Declarations/dist/screeps.d.ts"/>
+
+var CreepManager = {
     CreepsInRole: function(role_id, cb){
         let Creeps = _.filter(Game.creeps, function(creep){
             return creep.memory.role == role_id;
@@ -40,5 +42,24 @@ module.exports = {
         else{
             cb(ERR_BUSY)
         }
+    },
+    EnsureCreepsForRole: function(role_id, max_number_of_creeps){
+        this.CreepsInRole(role_id, (err, totalCreeps, Creeps) => {
+            if(err){
+                console.log(err)
+            }
+            if(totalCreeps < max_number_of_creeps){
+                CreepManager.SpawnNewCreep("Spawn1", role_id, function(err){
+                    if(err){
+                        console.log(err);
+                    }
+                    else{
+                        console.log("Succesfully Spawned New Creep");
+                    }
+                })
+            }
+        });
     }
 }
+
+module.exports = CreepManager;
