@@ -6,7 +6,7 @@ var Harvesters = require('role.harvester');
 module.exports.loop = () => {
 
     //HARVESTERS
-    CreepManager.EnsureCreepsForRole(0, 5);
+    CreepManager.EnsureCreepsForRole(0, 8);
     Harvesters.update();
 
     //BUILDERS
