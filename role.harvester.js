@@ -9,6 +9,8 @@ Harvester = {
         for(let i in allEnergySources){
             let energy_source = allEnergySources[i];
             if(!Memory.sourceQueue[energy_source.id]){
+                console.log(energy_source.id);
+                console.log("Adding To Memory");
                 let found = Game.spawns["Spawn1"].room.lookAtArea(energy_source.pos.y - 1, energy_source.pos.x - 1, energy_source.pos.y + 1, energy_source.pos.x + 1, true);
                 let max_number_of_harvesters = 9;
                 for(let f in found){
@@ -21,78 +23,114 @@ Harvester = {
                 Memory.sourceQueue[energy_source.id] = {queued_creeps: [], max: max_number_of_harvesters, id: energy_source.id};
             }
             else{
-                Game.spawns["Spawn1"].room.visual.text(Memory.sourceQueue[energy_source.id].queued_creeps.length, Game.getObjectById(energy_source.id).pos.x + 1, Game.getObjectById(energy_source.id).pos.y)
+                if(Memory.sourceQueue[energy_source.id].queued_creeps){
+                    Game.spawns["Spawn1"].room.visual.text(Memory.sourceQueue[energy_source.id].queued_creeps.length, Game.getObjectById(energy_source.id).pos.x + 0.3, Game.getObjectById(energy_source.id).pos.y+0.2, {font: "0.4 arial", backgroundColor: "#DE5549",backgroundPadding: 0.1})
+                }
             }
         }
     },
+    findSourceIdForCreep: (harvester_creep) => {
+        let sourceId = _.findKey(Memory.sourceQueue, (o) => {
+            if(o.queued_creeps){
+                return o.queued_creeps.indexOf(harvester_creep.id) !== -1
+            }
+            else{
+                return false;
+            }
+        });
+        console.log("sourceId: "+sourceId);
+        return sourceId;
+    },
     isNearEnergySource: (harvester_creep) => {
         if(harvester_creep != null){
-            let source_id = harvester_creep.memory.source_target
+            let source_id = Harvester.findSourceIdForCreep(harvester_creep);
             if(source_id){
                 let queuedSource = Game.getObjectById(source_id)
                 if(queuedSource){
                     return harvester_creep.pos.inRangeTo(queuedSource.pos,1);
                 }
+                console.log("Couldn't find source by id");
+                return false
             }
             else{
                 let highest_priority = 0
-                let sources = {}
+                let source = undefined
                 for(let id in Memory.sourceQueue){
                     let source_queue = Memory.sourceQueue[id]
-                    let calculated_priority = Math.exp((source_queue.max/(source_queue.queued_creeps.length + 1)));
-                    console.log(calculated_priority);
-                    sources[calculated_priority] = source_queue
-                    if(highest_priority == 0){
-                        highest_priority = calculated_priority
-                    }
-                    if(highest_priority < calculated_priority){
-                        highest_priority = calculated_priority
+                    if(source_queue.queued_creeps){
+                        let calculated_priority = Math.exp((source_queue.max/(source_queue.queued_creeps.length + 1)));
+                        console.log(calculated_priority);
+                        if(highest_priority == 0){
+                            highest_priority = calculated_priority
+                            source = source_queue
+                        }
+                        if(highest_priority < calculated_priority){
+                            highest_priority = calculated_priority
+                            source = source_queue
+                        }
+                            
                     }
                 }
-                let highestPrioritySource = sources[highest_priority]
-                Memory.sourceQueue[highestPrioritySource.id].queued_creeps.push(harvester_creep.id)
-                harvester_creep.memory.source_target = highestPrioritySource.id
+                if(source){
+                    if(!Memory.sourceQueue[source.id].queued_creeps){
+                        Memory.sourceQueue[source.id].queued_creeps = [];
+                    }
+                    Memory.sourceQueue[source.id].queued_creeps.push(harvester_creep.id)
+                }
                 return false;
             }
-            return false;
         }
         return false;
         
     },
     isNearEnergyDrop: (creep) => {
         let nearestSpawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS)
-        //check if nearest spawn is full of energy;
-        if(nearestSpawn.energy >= nearestSpawn.energyCapacity){
+        let nearestController = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {filter: (structure) => {
+            return structure.structureType == STRUCTURE_CONTROLLER;
+        }})
+        if(nearestSpawn){
+            //check if nearest spawn is full of energy and prioritise controller should it be below 25% upgraded or there are less than 2000 game ticks until it gets downgraded;
+            if(nearestSpawn.energy >= nearestSpawn.energyCapacity || (nearestController.progress/nearestController.progressTotal) < 0.25 || nearestController.ticksToDowngrade < 2000){
+                return {isNear: creep.pos.inRangeTo(nearestController.pos,3), structure: nearestController};
+            }
+            else{
+                return {isNear: creep.pos.inRangeTo(nearestSpawn.pos, 1), structure: nearestSpawn};
+            }
+        }
+        else{
             let nearestController = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {filter: (structure) => {
                 return structure.structureType == STRUCTURE_CONTROLLER;
             }})
             return {isNear: creep.pos.inRangeTo(nearestController.pos,3), structure: nearestController};
         }
-        else{
-            return {isNear: creep.pos.inRangeTo(nearestSpawn.pos, 1), structure: nearestSpawn};
-        }
     },
     setNextTask: {
         keepHarvesting: (creep) => {
-            let harvesting = creep.harvest(Game.getObjectById(creep.memory.source_target));
-            if(harvesting != OK){
-                creep.say("❌ ⛏️");
-                console.log("Error Occurred Attempting To Mine Energy: "+harvesting)
+            let source_id = Harvester.findSourceIdForCreep(creep)
+            if(source_id){
+                let harvesting = creep.harvest(Game.getObjectById(source_id));
+                if(harvesting != OK){
+                    creep.say("❌ ⛏️");
+                    console.log("Error Occurred Attempting To Mine Energy: "+harvesting)
+                }
+                else{
+                    creep.say("⛏️");
+                    creep.memory.status = {op: -1, state:"HARVESTING"}
+                }
             }
             else{
-                creep.say("⛏️");
-                creep.memory.status = {op: -1, state:"HARVESTING"}
+                Harvester.setNextTask.findNearestEnergySource(creep);
             }
         },
         findNearestEnergySource: (creep) => {
-            Harvester.isNearEnergySource(creep)
             creep.memory.status = {op: 0, state:"FINDING_NEAREST_SOURCE"}
         },
         findNearestEnergyDrop: (creep) => {
-            if(creep.memory.source_target){
-                let qc = Memory.sourceQueue[creep.memory.source_target].queued_creeps
+            let source_id = Harvester.findSourceIdForCreep(creep);
+            if(source_id){
+                let qc = Memory.sourceQueue[source_id].queued_creeps
                 qc = qc.splice(qc.indexOf(creep.id),1);
-                Memory.sourceQueue[creep.memory.source_target].queued_creeps = qc;
+                Memory.sourceQueue[source_id].queued_creeps = qc;
                 creep.memory.source_target = undefined;
             }
             creep.memory.status = {op: 1, state:"FINDING_NEAREST_ENERGY_DROP"}
@@ -144,7 +182,7 @@ Harvester = {
                     }
                     else{
                         //creep is not near energy source, move
-                        harvester_creep.moveTo(Game.getObjectById(harvester_creep.memory.source_target), {visualizePathStyle: {
+                        harvester_creep.moveTo(Game.getObjectById(Harvester.findSourceIdForCreep(harvester_creep)), {visualizePathStyle: {
                             fill: 'transparent',
                             stroke: '#41CBCB',
                             lineStyle: 'dashed',

@@ -2,6 +2,7 @@
 var ConsoleCommands = require('console.commands');
 var CreepManager = require('creep.manager');
 var Harvesters = require('role.harvester');
+var Builders = require('role.builder');
 
 module.exports.loop = () => {
 
@@ -11,6 +12,7 @@ module.exports.loop = () => {
 
     //BUILDERS
     CreepManager.EnsureCreepsForRole(1, 2);
+    Builders.update();
 
 
 }
