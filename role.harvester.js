@@ -23,8 +23,17 @@ Harvester = {
                 Memory.sourceQueue[energy_source.id] = {queued_creeps: [], max: max_number_of_harvesters, id: energy_source.id};
             }
             else{
-                if(Memory.sourceQueue[energy_source.id].queued_creeps){
-                    Game.spawns["Spawn1"].room.visual.text(Memory.sourceQueue[energy_source.id].queued_creeps.length, Game.getObjectById(energy_source.id).pos.x + 0.3, Game.getObjectById(energy_source.id).pos.y+0.2, {font: "0.4 arial", backgroundColor: "#DE5549",backgroundPadding: 0.1})
+                let queued_creeps = Memory.sourceQueue[energy_source.id].queued_creeps
+                if(queued_creeps){
+                    for(let n in queued_creeps){
+                        for(let creep in Game.creeps){
+                            if(!Game.creeps[creep].id){
+                                qc = queued_creeps.splice(n,1);
+                                Memory.sourceQueue[energy_source.id].queued_creeps = qc;
+                            }
+                        }
+                    }
+                    Game.spawns["Spawn1"].room.visual.text(queued_creeps.length, Game.getObjectById(energy_source.id).pos.x + 0.3, Game.getObjectById(energy_source.id).pos.y+0.2, {font: "0.4 arial", backgroundColor: "#DE5549",backgroundPadding: 0.1})
                 }
             }
         }
@@ -38,7 +47,6 @@ Harvester = {
                 return false;
             }
         });
-        console.log("sourceId: "+sourceId);
         return sourceId;
     },
     isNearEnergySource: (harvester_creep) => {
@@ -59,7 +67,6 @@ Harvester = {
                     let source_queue = Memory.sourceQueue[id]
                     if(source_queue.queued_creeps){
                         let calculated_priority = Math.exp((source_queue.max/(source_queue.queued_creeps.length + 1)));
-                        console.log(calculated_priority);
                         if(highest_priority == 0){
                             highest_priority = calculated_priority
                             source = source_queue
@@ -84,24 +91,31 @@ Harvester = {
         
     },
     isNearEnergyDrop: (creep) => {
-        let nearestSpawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS)
+        let nearestSpawn = creep.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
+            return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy < o.energyCapacity;
+        }})
         let nearestController = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {filter: (structure) => {
             return structure.structureType == STRUCTURE_CONTROLLER;
         }})
-        if(nearestSpawn){
+        if(nearestSpawn && nearestController){
             //check if nearest spawn is full of energy and prioritise controller should it be below 25% upgraded or there are less than 2000 game ticks until it gets downgraded;
-            if(nearestSpawn.energy >= nearestSpawn.energyCapacity || (nearestController.progress/nearestController.progressTotal) < 0.25 || nearestController.ticksToDowngrade < 2000){
+            if(!nearestSpawn || (nearestController.progress/nearestController.progressTotal) < 0.25 || nearestController.ticksToDowngrade < 2000){
                 return {isNear: creep.pos.inRangeTo(nearestController.pos,3), structure: nearestController};
             }
             else{
-                return {isNear: creep.pos.inRangeTo(nearestSpawn.pos, 1), structure: nearestSpawn};
+                if(creep.pos.getRangeTo(nearestSpawn) < creep.pos.getRangeTo(nearestController)){
+                    return {isNear: creep.pos.inRangeTo(nearestSpawn.pos, 1), structure: nearestSpawn};
+                }
+                else{
+                    return {isNear: creep.pos.inRangeTo(nearestController.pos, 3), structure: nearestController};
+                }
             }
         }
         else{
-            let nearestController = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {filter: (structure) => {
-                return structure.structureType == STRUCTURE_CONTROLLER;
-            }})
-            return {isNear: creep.pos.inRangeTo(nearestController.pos,3), structure: nearestController};
+            if(nearestController){
+                return {isNear: creep.pos.inRangeTo(nearestController.pos,3), structure: nearestController};
+            }
+            return {isNear: false, structure: undefined};
         }
     },
     setNextTask: {
@@ -129,6 +143,7 @@ Harvester = {
             let source_id = Harvester.findSourceIdForCreep(creep);
             if(source_id){
                 let qc = Memory.sourceQueue[source_id].queued_creeps
+                console.log("Creep position in queue: "+qc.indexOf(creep.id));
                 qc = qc.splice(qc.indexOf(creep.id),1);
                 Memory.sourceQueue[source_id].queued_creeps = qc;
                 creep.memory.source_target = undefined;
@@ -137,7 +152,7 @@ Harvester = {
         },
         keepTransferingToEnergyDrop: (creep) => {
             let nearestEnergyDrop = Harvester.isNearEnergyDrop(creep);
-            if(nearestEnergyDrop.structure.structureType == STRUCTURE_SPAWN){
+            if(nearestEnergyDrop.structure.structureType == STRUCTURE_SPAWN || nearestEnergyDrop.structure.structureType == STRUCTURE_EXTENSION){
                 let transfer = creep.transfer(nearestEnergyDrop.structure, RESOURCE_ENERGY);
                 if(transfer != OK){
                     creep.say("❌ 💱");
@@ -207,13 +222,18 @@ Harvester = {
                     }
                     else{
                         //creep is not near energy drop, move
-                        harvester_creep.moveTo(harvester_creep.pos.findClosestByPath([nearestEnergyDrop.structure]), {visualizePathStyle: {
-                            fill: 'transparent',
-                            stroke: '#FFCD42',
-                            lineStyle: 'dashed',
-                            strokeWidth: .1,
-                            opacity: .4
-                        }});
+                        if(nearestEnergyDrop.structure){
+                            harvester_creep.moveTo(harvester_creep.pos.findClosestByPath([nearestEnergyDrop.structure]), {visualizePathStyle: {
+                                fill: 'transparent',
+                                stroke: '#FFCD42',
+                                lineStyle: 'dashed',
+                                strokeWidth: .1,
+                                opacity: .4
+                            }});
+                        }
+                        else{
+                            //no free structure found
+                        }
                     }
                 }
                 else if(harvester_creep_status.state == "TRANSFERING_ENERGY_TO_DROP"){
