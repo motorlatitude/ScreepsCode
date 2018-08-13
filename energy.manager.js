@@ -17,7 +17,7 @@ let EnergyManager = {
 
     },
     reserveEnergy: (amount) => {
-
+        
     }
 }
 

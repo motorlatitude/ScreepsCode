@@ -3,8 +3,10 @@ var ConsoleCommands = require('console.commands');
 var CreepManager = require('creep.manager');
 var EnergyManager = require('energy.manager');
 var Harvesters = require('role.harvester');
+var Upgraders = require('role.upgrader');
 var Builders = require('role.builder');
 var Janitors = require('role.janitor');
+var Towers = require('role.tower');
 
 module.exports.loop = () => {
 
@@ -18,15 +20,22 @@ module.exports.loop = () => {
     EnergyManager.totalAvailableEnergy()
 
     //HARVESTERS
-    CreepManager.EnsureCreepsForRole(0, 8);
+    CreepManager.EnsureCreepsForRole(0, 6);
     Harvesters.update();
 
     //BUILDERS
     CreepManager.EnsureCreepsForRole(1, 2);
     Builders.update();
 
-    //JANITOR
-    CreepManager.EnsureCreepsForRole(2, 2);
+    //JANITORS
+    CreepManager.EnsureCreepsForRole(2, 4);
     Janitors.update();
+
+    //UPGRADERS
+    CreepManager.EnsureCreepsForRole(3, 1);
+    Upgraders.update();
+
+    //TOWER
+    Towers.update();
 
 }

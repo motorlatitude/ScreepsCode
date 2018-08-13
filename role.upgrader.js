@@ -1,6 +1,6 @@
 /// <reference path="./Screeps-Typescript-Declarations/dist/screeps.d.ts"/>
 
-Harvester = {
+Upgrader = {
     init: () => {
         if(!Memory.sourceQueue){
             Memory.sourceQueue = {}
@@ -9,8 +9,6 @@ Harvester = {
         for(let i in allEnergySources){
             let energy_source = allEnergySources[i];
             if(!Memory.sourceQueue[energy_source.id]){
-                console.log(energy_source.id);
-                console.log("Adding To Memory");
                 let found = Game.spawns["Spawn1"].room.lookAtArea(energy_source.pos.y - 1, energy_source.pos.x - 1, energy_source.pos.y + 1, energy_source.pos.x + 1, true);
                 let max_number_of_harvesters = 9;
                 for(let f in found){
@@ -92,30 +90,13 @@ Harvester = {
         
     },
     isNearEnergyDrop: (creep) => {
-        let nearestSpawn = creep.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
-            return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy < o.energyCapacity && o.my;
-        }})
         let nearestController = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {filter: (structure) => {
             return structure.structureType == STRUCTURE_CONTROLLER;
         }})
-        if(nearestSpawn && nearestController){
-            //check if nearest spawn is full of energy and prioritise controller should it be below 25% upgraded or there are less than 2000 game ticks until it gets downgraded;
-            if(!nearestSpawn || (nearestController.progress/nearestController.progressTotal) < 0.25 || nearestController.ticksToDowngrade < 2000){
-                return {isNear: creep.pos.inRangeTo(nearestController.pos,3), structure: nearestController};
-            }
-            else{
-                if(creep.pos.getRangeTo(nearestSpawn) < creep.pos.getRangeTo(nearestController)){
-                    return {isNear: creep.pos.inRangeTo(nearestSpawn.pos, 1), structure: nearestSpawn};
-                }
-                else{
-                    return {isNear: creep.pos.inRangeTo(nearestController.pos, 3), structure: nearestController};
-                }
-            }
+        if(nearestController){
+            return {isNear: creep.pos.inRangeTo(nearestController.pos, 3), structure: nearestController};
         }
         else{
-            if(nearestController){
-                return {isNear: creep.pos.inRangeTo(nearestController.pos,3), structure: nearestController};
-            }
             return {isNear: false, structure: undefined};
         }
     },
@@ -192,7 +173,7 @@ Harvester = {
     update: () => {
         Harvester.init();
         let harvesters = _.filter(Game.creeps, function(creep){
-            return creep.memory.role == 0;
+            return creep.memory.role == 3;
         });
         for(let i in harvesters){
             let harvester_creep = harvesters[i];
@@ -260,4 +241,4 @@ Harvester = {
     }
 }
 
-module.exports = Harvester;
+module.exports = Upgrader;

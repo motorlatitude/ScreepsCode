@@ -2,11 +2,23 @@
 
 let Janitor = {
     findClosestStructure: (janitor) => {
+        let towers = _.filter(Game.structures, (o) => {
+            return o.structureType == STRUCTURE_TOWER;
+        });
+        towers = towers.sort((a,b) => {
+            return (a.energy/a.energyCapacity) - (b.energyCapacity/b.energyCapacity); 
+        });
+        for(let t in towers){
+            let tower = towers[t];
+            if(tower.energy < tower.energyCapacity){
+                return tower
+            }
+        }
         let hit_structures = janitor.room.find(FIND_STRUCTURES, {filter: (o) => {
             return o.structureType == STRUCTURE_RAMPART || o.structureType == STRUCTURE_ROAD || o.structureType == STRUCTURE_WALL
         }})
         hit_structures = hit_structures.sort((a,b) => {
-            return (a.hits/a.hitsMax) - (b.hits/b.hitsMax); 
+            return (a.hits) - (b.hits);
         });
         for(let i in hit_structures){
             let structure = hit_structures[i];
@@ -16,9 +28,41 @@ let Janitor = {
         }
     },
     findClosestEnergy: (janitor) => {
-        return janitor.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
-            return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy >= 50;
-        }})
+        if(janitor){
+            if(janitor.memory.energy_source){
+                let assigned_source = Game.getObjectById(janitor.memory.enery_source);
+                if(assigned_source){
+                    return assigned_source;
+                }
+                else{
+                    //extension has been removed?
+                    let closestSpawn = janitor.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
+                        return (o.structureType == STRUCTURE_EXTENSION) && o.energy >= 50 && o.my;
+                    }})
+                    if(closestSpawn){
+                        janitor.memory.energy_source = closestSpawn.id;
+                        return closestSpawn;
+                    }
+                    else{
+                        let closestSpawn = janitor.pos.findClosestByPath(FIND_MY_SPAWNS);
+                        return closestSpawn;
+                    }
+                }
+            }
+            else{
+                let closestSpawn = janitor.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
+                    return (o.structureType == STRUCTURE_EXTENSION) && o.energy >= 50 && o.my;
+                }})
+                if(closestSpawn){
+                    janitor.memory.energy_source = closestSpawn.id;
+                    return closestSpawn;
+                }
+                else{
+                    let closestSpawn = janitor.pos.findClosestByPath(FIND_MY_SPAWNS);
+                    return closestSpawn;
+                }
+            }
+        }
     },
     isNearStructure: (janitor) => {
         if(janitor){
@@ -71,8 +115,8 @@ let Janitor = {
                             fill: 'transparent',
                             stroke: '#1ED760',
                             lineStyle: 'dashed',
-                            strokeWidth: .1,
-                            opacity: .3
+                            strokeWidth: .05,
+                            opacity: .6
                         }});
                     }
                 }
@@ -85,14 +129,14 @@ let Janitor = {
                             fill: 'transparent',
                             stroke: '#41CBCB',
                             lineStyle: 'dashed',
-                            strokeWidth: .1,
-                            opacity: .4
+                            strokeWidth: .05,
+                            opacity: .6
                         }});
                     }
                 }
                 else if(janitor_status.state == "WITHDRAWING_ENERGY"){
                     if(janitor.carry.energy != janitor.carryCapacity){
-                        if(Memory.totalAvailableEnergy > 300){ //means we will always be able to create creeps first
+                        if(Memory.totalAvailableEnergy > 400){ //means we will always be able to create creeps first
                             let withdrawing = janitor.withdraw(Janitor.findClosestEnergy(janitor), RESOURCE_ENERGY)
                             if(withdrawing != OK){
                                 janitor.say("❌ ❇️")
@@ -109,21 +153,26 @@ let Janitor = {
                     }
                 }
                 else if(janitor_status.state == "TRANSFERING_TO_STRUCTURE"){
-                    let closestStructure = Janitor.findClosestStructure(janitor);
-                    let transfer = undefined;
-                    if(closestStructure.structureType == STRUCTURE_WALL || closestStructure.structureType == STRUCTURE_RAMPART){
-                        transfer = janitor.repair(closestStructure)
-                    }
-                    else{
-                        transfer = janitor.transfer(closestStructure, RESOURCE_ENERGY)
-                    }
-                    if(transfer != OK){
-                        janitor.say("❌ 🛠️")
-                        console.log("Transferring/REPAIRING Using Energy Failed: "+transfer)
+                    if(janitor.energy == 0){
                         Janitor.setNextTask.findEnergy(janitor);
                     }
                     else{
-                        janitor.say("🛠️")
+                        let closestStructure = Janitor.findClosestStructure(janitor);
+                        let transfer = undefined;
+                        if(closestStructure.structureType == STRUCTURE_WALL || closestStructure.structureType == STRUCTURE_RAMPART){
+                            transfer = janitor.repair(closestStructure)
+                        }
+                        else{
+                            transfer = janitor.transfer(closestStructure, RESOURCE_ENERGY)
+                        }
+                        if(transfer != OK){
+                            janitor.say("❌ 🛠️")
+                            console.log("Transferring/repairing Using Energy Failed: "+transfer)
+                            Janitor.setNextTask.findEnergy(janitor);
+                        }
+                        else{
+                            janitor.say("🛠️")
+                        }
                     }
                 }
                 else{

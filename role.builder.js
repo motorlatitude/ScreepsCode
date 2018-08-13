@@ -83,8 +83,8 @@ Builder = {
                             fill: 'transparent',
                             stroke: '#CE6709',
                             lineStyle: 'dashed',
-                            strokeWidth: .1,
-                            opacity: .4
+                            strokeWidth: .05,
+                            opacity: .6
                         }});
                     }
                 }
@@ -115,23 +115,36 @@ Builder = {
                         Builder.setNextTask.withdrawEnergy(builder);
                     }
                     else{
-                        builder.moveTo(builder.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
-                            return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy >= 50;
-                        }}), {visualizePathStyle: {
+                        let closestDrop = undefined;
+                        if(builder.memory.energy_source){
+                            closestDrop = Game.getObjectById(builder.memory.energy_source);
+                        }
+                        else{
+                            closestDrop = builder.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
+                                return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy >= 50;
+                            }});
+                        }
+                        builder.moveTo(closestDrop, {visualizePathStyle: {
                             fill: 'transparent',
                             stroke: '#41CBCB',
                             lineStyle: 'dashed',
-                            strokeWidth: .1,
-                            opacity: .4
+                            strokeWidth: .05,
+                            opacity: .6
                         }});
                     }
                 }
                 else if(builder_status.state == "WITHDRAWING_ENERGY"){
                     if(builder.carry.energy != builder.carryCapacity){
-                        if(Memory.totalAvailableEnergy > 300){ //means we will always be able to create creeps first
-                            let withdrawing = builder.withdraw(builder.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
-                                return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy > 0;
-                            }}), RESOURCE_ENERGY);
+                        if(Memory.totalAvailableEnergy > 400){ //means we will always be able to create creeps first, builders have lowest priority
+                            let withdrawing = undefined;
+                            if(builder.memory.energy_source){
+                                withdrawing = builder.withdraw(Game.getObjectById(builder.memory.energy_source), RESOURCE_ENERGY);
+                            }
+                            else{
+                                withdrawing = builder.withdraw(builder.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
+                                    return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy > 0;
+                                }}), RESOURCE_ENERGY);
+                            }
                             if(withdrawing != OK){
                                 builder.say("❌ ❇️")
                                 console.log("Withdrawing From Spawn Failed: "+withdrawing)
