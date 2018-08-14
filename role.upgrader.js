@@ -49,7 +49,7 @@ Upgrader = {
     },
     isNearEnergySource: (harvester_creep) => {
         if(harvester_creep != null){
-            let source_id = Harvester.findSourceIdForCreep(harvester_creep);
+            let source_id = Upgrader.findSourceIdForCreep(harvester_creep);
             if(source_id){
                 let queuedSource = Game.getObjectById(source_id)
                 if(queuedSource){
@@ -102,7 +102,7 @@ Upgrader = {
     },
     setNextTask: {
         keepHarvesting: (creep) => {
-            let source_id = Harvester.findSourceIdForCreep(creep)
+            let source_id = Upgrader.findSourceIdForCreep(creep)
             if(source_id){
                 let harvesting = creep.harvest(Game.getObjectById(source_id));
                 if(harvesting != OK){
@@ -115,14 +115,14 @@ Upgrader = {
                 }
             }
             else{
-                Harvester.setNextTask.findNearestEnergySource(creep);
+                Upgrader.setNextTask.findNearestEnergySource(creep);
             }
         },
         findNearestEnergySource: (creep) => {
             creep.memory.status = {op: 0, state:"FINDING_NEAREST_SOURCE"}
         },
         findNearestEnergyDrop: (creep) => {
-            let source_id = Harvester.findSourceIdForCreep(creep);
+            let source_id = Upgrader.findSourceIdForCreep(creep);
             if(source_id){
                 let qc = Memory.sourceQueue[source_id].queued_creeps
                 console.log("Creep position in queue: "+qc.indexOf(creep.id));
@@ -133,26 +133,14 @@ Upgrader = {
             creep.memory.status = {op: 1, state:"FINDING_NEAREST_ENERGY_DROP"}
         },
         keepTransferingToEnergyDrop: (creep) => {
-            let nearestEnergyDrop = Harvester.isNearEnergyDrop(creep);
+            let nearestEnergyDrop = Upgrader.isNearEnergyDrop(creep);
             if(nearestEnergyDrop.structure){
-                if((nearestEnergyDrop.structure.structureType == STRUCTURE_SPAWN || nearestEnergyDrop.structure.structureType == STRUCTURE_EXTENSION) && nearestEnergyDrop.structure.my){
-                    let transfer = creep.transfer(nearestEnergyDrop.structure, RESOURCE_ENERGY);
-                    if(transfer != OK){
-                        creep.say("❌ 💱");
-                        console.log("Unable To Transfer Energy To Spawn: "+transfer+"\n Calculating New Route...");
-                        Harvester.setNextTask.findNearestEnergyDrop(creep);
-                    }
-                    else{
-                        creep.say("💱");
-                        creep.memory.status = {op: 2, state:"TRANSFERING_ENERGY_TO_DROP"}
-                    }
-                }
-                else if(nearestEnergyDrop.structure.structureType == STRUCTURE_CONTROLLER){
+                if(nearestEnergyDrop.structure.structureType == STRUCTURE_CONTROLLER){
                     let upgrade = creep.upgradeController(nearestEnergyDrop.structure);
                     if(upgrade != OK){
                         creep.say("❌ 💱");
                         console.log("Unable To Transfer Energy To Controller: "+upgrade+"\n Calculating New Route...");
-                        Harvester.setNextTask.findNearestEnergyDrop(creep);
+                        Upgrader.setNextTask.findNearestEnergyDrop(creep);
                     }
                     else{
                         creep.say("💱");
@@ -161,17 +149,17 @@ Upgrader = {
                 }
                 else{
                     console.log("Unknown Structure Type")
-                    Harvester.setNextTask.findNearestEnergyDrop(creep);
+                    Upgrader.setNextTask.findNearestEnergyDrop(creep);
                 }
             }
             else{
-                console.log("Couldn't Find Appropriate Energy Drop")
-                Harvester.setNextTask.findNearestEnergyDrop(creep);
+                console.log("Couldn't Find Appropriate Energy Drop For Upgrader")
+                Upgrader.setNextTask.findNearestEnergyDrop(creep);
             }
         }
     },
     update: () => {
-        Harvester.init();
+        Upgrader.init();
         let harvesters = _.filter(Game.creeps, function(creep){
             return creep.memory.role == 3;
         });
@@ -180,12 +168,12 @@ Upgrader = {
             if(harvester_creep){
                 let harvester_creep_status = harvester_creep.memory.status;
                 if(harvester_creep_status.state == "FINDING_NEAREST_SOURCE"){
-                    if(Harvester.isNearEnergySource(harvester_creep)){
-                        Harvester.setNextTask.keepHarvesting(harvester_creep);
+                    if(Upgrader.isNearEnergySource(harvester_creep)){
+                        Upgrader.setNextTask.keepHarvesting(harvester_creep);
                     }
                     else{
                         //creep is not near energy source, move
-                        harvester_creep.moveTo(Game.getObjectById(Harvester.findSourceIdForCreep(harvester_creep)), {visualizePathStyle: {
+                        harvester_creep.moveTo(Game.getObjectById(Upgrader.findSourceIdForCreep(harvester_creep)), {visualizePathStyle: {
                             fill: 'transparent',
                             stroke: '#41CBCB',
                             lineStyle: 'dashed',
@@ -197,16 +185,16 @@ Upgrader = {
                 else if(harvester_creep_status.state == "HARVESTING"){
                     if(harvester_creep.carry.energy >= harvester_creep.carryCapacity){
                         //return resources to spawn or controller
-                        Harvester.setNextTask.findNearestEnergyDrop(harvester_creep);
+                        Upgrader.setNextTask.findNearestEnergyDrop(harvester_creep);
                     }
                     else{
-                        Harvester.setNextTask.keepHarvesting(harvester_creep);
+                        Upgrader.setNextTask.keepHarvesting(harvester_creep);
                     }
                 }
                 else if(harvester_creep_status.state == "FINDING_NEAREST_ENERGY_DROP" && harvester_creep.carry.energy > 0){
-                    let nearestEnergyDrop = Harvester.isNearEnergyDrop(harvester_creep);
+                    let nearestEnergyDrop = Upgrader.isNearEnergyDrop(harvester_creep);
                     if(nearestEnergyDrop.isNear){
-                        Harvester.setNextTask.keepTransferingToEnergyDrop(harvester_creep);
+                        Upgrader.setNextTask.keepTransferingToEnergyDrop(harvester_creep);
                     }
                     else{
                         //creep is not near energy drop, move
@@ -226,15 +214,15 @@ Upgrader = {
                 }
                 else if(harvester_creep_status.state == "TRANSFERING_ENERGY_TO_DROP"){
                     if(harvester_creep.carry.energy == 0){
-                        Harvester.setNextTask.findNearestEnergySource(harvester_creep);
+                        Upgrader.setNextTask.findNearestEnergySource(harvester_creep);
                     }
                     else{
-                        Harvester.setNextTask.keepTransferingToEnergyDrop(harvester_creep);
+                        Upgrader.setNextTask.keepTransferingToEnergyDrop(harvester_creep);
                     }
                 }
                 else{
                     console.log("Unknown Creep State Or Doesn't Satisfy Conditions For State: "+harvester_creep_status.state)
-                    Harvester.setNextTask.findNearestEnergySource(harvester_creep)
+                    Upgrader.setNextTask.findNearestEnergySource(harvester_creep)
                 }
             }
         }

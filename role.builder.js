@@ -27,7 +27,7 @@ Builder = {
                 else{
                     //extension has been removed?
                     let closestSpawn = builder.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
-                        return (o.structureType == STRUCTURE_EXTENSION) && o.energy >= 50;
+                        return (o.structureType == STRUCTURE_EXTENSION) && o.energy >= 50 && o.my;
                     }})
                     if(closestSpawn){
                         builder.memory.energy_source = closestSpawn.id;
@@ -38,7 +38,7 @@ Builder = {
             }
             else{
                 let closestSpawn = builder.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
-                    return (o.structureType == STRUCTURE_EXTENSION) && o.energy >= 50;
+                    return (o.structureType == STRUCTURE_EXTENSION) && o.energy >= 50 && o.my;
                 }})
                 if(closestSpawn){
                     builder.memory.energy_source = closestSpawn.id;
@@ -121,7 +121,7 @@ Builder = {
                         }
                         else{
                             closestDrop = builder.pos.findClosestByPath(FIND_STRUCTURES, {filter: (o) => {
-                                return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy >= 50;
+                                return (o.structureType == STRUCTURE_EXTENSION || o.structureType == STRUCTURE_SPAWN) && o.energy >= 50 && o.my;
                             }});
                         }
                         builder.moveTo(closestDrop, {visualizePathStyle: {

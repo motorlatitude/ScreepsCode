@@ -35,6 +35,11 @@ var CreepManager = {
                 creepBody = [WORK, WORK, CARRY, CARRY, MOVE, MOVE]; //400
                 creepName += "UPGRADER_"
             }
+            else if(role_id == 4){
+                creepBody = [WORK, CARRY, CARRY, CARRY, MOVE, MOVE]; //400
+                creepName += "WALLER_"
+                state = "FINDING_NEAREST_ENERGY"
+            }
             creepName += new Date().getTime();
             let spawning = Game.spawns[spawn].spawnCreep(creepBody, creepName, {memory:{role: role_id, status: {op: 0, state: state} }})
             if(spawning == OK){

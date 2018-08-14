@@ -6,6 +6,7 @@ var Harvesters = require('role.harvester');
 var Upgraders = require('role.upgrader');
 var Builders = require('role.builder');
 var Janitors = require('role.janitor');
+var Wallers = require('role.waller');
 var Towers = require('role.tower');
 
 module.exports.loop = () => {
@@ -34,6 +35,10 @@ module.exports.loop = () => {
     //UPGRADERS
     CreepManager.EnsureCreepsForRole(3, 1);
     Upgraders.update();
+
+    //WALLERS
+    CreepManager.EnsureCreepsForRole(4, 2);
+    Wallers.update();
 
     //TOWER
     Towers.update();
